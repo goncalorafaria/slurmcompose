@@ -1,0 +1,8 @@
+script_type: quest.serving.reward_server
+args:
+  reward_type: value
+  reward_model_path: /gscratch/ark/graf/LLaMA-Factory/saves/llama3/8b/full/reward/ 
+  reward_model_batch_size: 32
+  reward_device: 0
+  reward_device_count: ${DEVICE_COUNT}
+  dtype: bfloat16

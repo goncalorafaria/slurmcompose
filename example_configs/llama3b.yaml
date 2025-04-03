@@ -1,0 +1,9 @@
+
+script_type: quest.serving.vllm_server
+args:
+  model: "meta-llama/Llama-3.2-3B-Instruct"
+  tensor_parallel_size: ${DEVICE_COUNT}
+  gpu_memory_utilization: 0.95
+  max_new_tokens: 1024
+  max_prompt_length: 2048
+  dtype: bfloat16

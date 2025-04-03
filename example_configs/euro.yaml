@@ -1,0 +1,9 @@
+
+script_type: quest.serving.vllm_server
+args:
+  model: "utter-project/EuroLLM-1.7B-Instruct"
+  tensor_parallel_size: ${DEVICE_COUNT}
+  gpu_memory_utilization: 0.95
+  max_new_tokens: 1024
+  max_prompt_length: 2048
+  dtype: bfloat16

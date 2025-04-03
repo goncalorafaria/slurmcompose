@@ -1,0 +1,7 @@
+pyyaml>=6.0
+termcolor>=2.0.0
+fire>=0.5.0
+pathlib>=1.0.1
+dataclasses>=0.8; python_version < '3.7'
+typing-extensions>=4.0.0
+literegistry>=0.0.1  # If this is your custom package, you may need to install it separately
