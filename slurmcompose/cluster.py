@@ -122,7 +122,7 @@ class SlurmCluster:
 
         script = SlurmScriptGenerator(
             device, script_config, account=self.account, **args
-        ).generate_script()
+        )._generate_command()
 
         return script
 
