@@ -8,7 +8,6 @@ from literegistry import RegistryClient, FileSystemKVStore
 ##
 from slurmcompose.cluster import SlurmCluster
 from slurmcompose.clustermonitor import ClusterStateMonitor
-from slurmcompose.slurm_utils import SlurmScriptGenerator
 
 
 def check_registry(registry, verbose=False):
