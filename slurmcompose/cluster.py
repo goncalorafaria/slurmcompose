@@ -7,6 +7,7 @@ import os
 import tempfile
 import time
 import datetime
+from types import SimpleNamespace
 
 ##
 from slurmcompose.slurm_utils import SlurmScriptGenerator
@@ -74,13 +75,18 @@ class SlurmCluster:
         print(self.get_all_job_statuses())
         self._save_job_state()
 
+    def __getitem__(self, key):
+        return SimpleNamespace(**self.script_specs[key])
+    
+    
     def _load_job_state(self) -> list:
         """Load job IDs from state file if it exists."""
         try:
             if self.state_file.exists():
                 with open(self.state_file, "r") as f:
                     return json.load(f)
-
+           
+                
             return []
         except json.JSONDecodeError:
             print(f"Error reading state file: {self.state_file}")
@@ -122,11 +128,12 @@ class SlurmCluster:
 
         script = SlurmScriptGenerator(
             device, script_config, account=self.account, **args
-        )._generate_command()
+        ).generate_script()
+        # _generate_command()
 
         return script
 
-    def submit_bash_job(self, script_content):
+    def submit_bash_job_2(self, script_content):
         try:
             # Create a directory for temporary scripts if it doesn't exist
             script_dir = "temp_scripts"
@@ -169,6 +176,27 @@ class SlurmCluster:
                 except OSError:
                     pass
             return None
+
+    def submit_bash_job(self, script_content):
+        with tempfile.NamedTemporaryFile(mode="w") as temp:
+            temp.write(script_content)
+            temp.flush()
+
+            executable = script_content.splitlines()[-1]
+            #print(f"Running script: {script_content}")
+            print(f"Running script: {executable.split(' ')}")
+            
+            # just run the script ona seperate process
+            process = subprocess.Popen([ arg for arg in executable.split(" ") if len(arg)>0])
+            # Return the process ID (PID) instead of the Popen object
+            return process.pid
+           
+
+
+    def invoke_local(self, device_name, script_spec, **args):
+        script = self.generate_script(device_name, script_spec, **args)
+
+        return self.submit_bash_job(script)
 
     def submit_slurm_job(self, script_content):
         # Write the script content to a temporary file
@@ -309,7 +337,13 @@ class SlurmCluster:
         except Exception as e:
             print(f"Error: {e}")
 
-
+    def __str__(self):
+        return f"SlurmCluster(user={self.user}, account={self.account}, devices_specs={self.devices_specs}, my_jobs={self.my_jobs})"
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    
 # Example usage:
 if __name__ == "__main__":
     # Create generator instance

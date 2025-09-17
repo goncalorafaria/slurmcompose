@@ -6,19 +6,21 @@ import copy
 
 def gpu_slurm(device_spec, script_type, account="cse") -> Dict[str, Any]:
     tag = script_type.split(".")[-1]
+    # #SBATCH --exclusive 
     return {
         "job-name": tag,
         "output": "slurm_%j.log",
         "error": "slurm_%j.err",
         "nodes": 1,
         "ntasks": 1,
-        "gres": f"gpu:{device_spec['device_count']}",
+        "gres": f"gpu:{device_spec['gpu_type']}:{device_spec['device_count']}",
         "time": f"{device_spec['hours']}:00:00",
         "mem": f"{device_spec['mem']}G",
         "partition": "gpu-" + device_spec["gpu_type"],
         "cpus-per-task": device_spec["cpus"],
         "account": account,
         "qos": "ckpt-gpu",
+        "exclusive": "",
     }
 
 
@@ -65,6 +67,7 @@ class SlurmScriptGenerator:
 
         # self.all_devices = self.load_config(devices_path)
         self.script_config = copy.deepcopy(script_config)
+        self.env_vars = script_config["env_vars"] if "env_vars" in script_config else []
 
         if "device_count" in device_spec:
             meta_args = {"DEVICE_COUNT": device_spec["device_count"], **kwargs}
@@ -95,7 +98,12 @@ class SlurmScriptGenerator:
         """Generate SLURM header section."""
         headers = ["#!/bin/bash"]
         for key, value in self.slurm_defaults.items():
-            headers.append(f"#SBATCH --{key}={value}")
+            
+            if value == "":
+                headers.append(f"#SBATCH --{key}")
+            else:
+                headers.append(f"#SBATCH --{key}={value}")
+                
         return "\n".join(headers)
 
     def _generate_env_setup(self) -> str:
@@ -111,6 +119,16 @@ class SlurmScriptGenerator:
         ]
         return "\n".join(setup)
 
+    def _convert_args(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert args to command line format."""
+        cmd_args = []
+        for key, value in args.items():
+            formatted_key = key.replace("_", "-")
+            cmd_args.append(f"--{formatted_key}={value}")
+            
+        return cmd_args
+
+
     def _generate_command(self) -> str:
         """Generate the command section based on script configuration."""
         if not self.script_config:
@@ -120,20 +138,20 @@ class SlurmScriptGenerator:
 
         script_type = self.script_config.get("script_type")
         args = self.script_config.get("args", {})
-
+        launcher = self.script_config.get("launcher","python -m")
         # Convert args to command line format
-        cmd_args = []
-        for key, value in args.items():
-            formatted_key = key.replace("_", "-")
-            cmd_args.append(f"--{formatted_key}={value}")
+        cmd_args = self._convert_args(args)
 
-        command = ["# Run the server", f"python -m {script_type} \\"]
-        command.extend(f"{arg} \\" for arg in cmd_args)
+        command = ["# Run the server\n", f"{launcher} {script_type} "]
+        command.extend(f"{arg} " for arg in cmd_args)
 
         # Remove trailing backslash from last line
-        command[-1] = command[-1].rstrip(" \\")
-        return "\n".join(command)
+        #command[-1] = command[-1].rstrip(" \\")
+        return " ".join(command)
 
+    def _generate_env_vars(self) -> str:
+        return "\n".join(self.env_vars)
+        
     def generate_script(
         self,
     ) -> str:
@@ -142,6 +160,8 @@ class SlurmScriptGenerator:
             self._generate_slurm_headers(),
             "",
             self._generate_env_setup(),
+            "",
+            self._generate_env_vars(),
             "",
             self._generate_command(),
         ]
