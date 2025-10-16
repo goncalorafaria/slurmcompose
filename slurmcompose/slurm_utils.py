@@ -2,13 +2,12 @@ import yaml
 from typing import Dict, Any, Optional
 from pathlib import Path
 import copy
+import os
 
-
-def gpu_slurm(device_spec, script_type, account="cse") -> Dict[str, Any]:
-    tag = script_type.split(".")[-1]
+def gpu_slurm(device_spec, script_type, account="cse", name="test_script") -> Dict[str, Any]:
     # #SBATCH --exclusive 
     return {
-        "job-name": tag,
+        "job-name": name,
         "output": "slurm_%j.log",
         "error": "slurm_%j.err",
         "nodes": 1,
@@ -24,10 +23,9 @@ def gpu_slurm(device_spec, script_type, account="cse") -> Dict[str, Any]:
     }
 
 
-def cpu_slurm(device_spec, script_type, account="cse") -> Dict[str, Any]:
-    tag = script_type.split(".")[-1]
+def cpu_slurm(device_spec, script_type, account="cse", name="test_script") -> Dict[str, Any]:
     return {
-        "job-name": tag,
+        "job-name": name,
         "output": "slurm_%j.log",
         "error": "slurm_%j.err",
         "nodes": 1,
@@ -46,7 +44,14 @@ SLURM_SPECS = {
     "gpu": gpu_slurm,
 }
 
-
+def get_conda_path_from_env():
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.environ["CONDA_PREFIX"])),
+        "etc",
+        "profile.d",
+        "conda.sh",
+    )
+    
 class SlurmScriptGenerator:
     """A class to generate SLURM batch scripts with customizable configurations."""
 
@@ -55,12 +60,15 @@ class SlurmScriptGenerator:
         device_spec,
         script_config,
         env_defaults={
-            "conda_path": "/gscratch/ark/graf/miniconda3/etc/profile.d/conda.sh",
-            "conda_env": "quest38",
+            "conda_path": get_conda_path_from_env(),
+            "conda_env": os.environ["CONDA_DEFAULT_ENV"],
         },
         account="cse",
+        name="test_script",
         **kwargs,
     ):
+
+        self.name = name
 
         # Default environment configurations
         self.env_defaults = env_defaults
@@ -91,7 +99,7 @@ class SlurmScriptGenerator:
 
         # Default SLURM configurations
         self.slurm_defaults = SLURM_SPECS[device_spec["type"]](
-            device_spec, script_type, account=account
+            device_spec, script_type, account=account, name=self.name
         )
 
     def _generate_slurm_headers(self) -> str:
@@ -136,6 +144,8 @@ class SlurmScriptGenerator:
                 "Script configuration not loaded. Please load a config file first."
             )
 
+        print("script_config", self.script_config)
+        
         script_type = self.script_config.get("script_type")
         args = self.script_config.get("args", {})
         launcher = self.script_config.get("launcher","python -m")

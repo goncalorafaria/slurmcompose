@@ -61,6 +61,7 @@ class SlurmCluster:
         user="gfaria",
         state_file="qflow/serving/configs/cluster_state.json",  # New parameter for state file
         account="cse",
+        **kwargs,
     ):
 
         self.devices_specs = load_config(devices_path)
@@ -74,6 +75,7 @@ class SlurmCluster:
         print("---" * 20)
         print(self.get_all_job_statuses())
         self._save_job_state()
+        self.extra_args = kwargs
 
     def __getitem__(self, key):
         return SimpleNamespace(**self.script_specs[key])
@@ -127,7 +129,7 @@ class SlurmCluster:
         script_config = self.script_specs[script_spec]
 
         script = SlurmScriptGenerator(
-            device, script_config, account=self.account, **args
+            device, script_config, account=self.account, name=script_spec, **args
         ).generate_script()
         # _generate_command()
 

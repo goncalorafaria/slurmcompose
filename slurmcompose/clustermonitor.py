@@ -39,7 +39,7 @@ class ClusterStateMonitor(threading.Thread):
     A thread that maintains multiple desired states of running SLURM jobs.
     """
 
-    def __init__(self, cluster, configs: List[Dict], check_interval: int = 60):
+    def __init__(self, cluster, configs: List[Dict], check_interval: int = 60,**extra_args):
         super().__init__()
         self.cluster = cluster
         self.configs = [
@@ -52,7 +52,8 @@ class ClusterStateMonitor(threading.Thread):
         ]
         self.check_interval = check_interval
         self._stop_event = threading.Event()
-
+        self.extra_args = extra_args if extra_args else {}
+        
     def stop(self):
         """Signal the thread to stop."""
         self._stop_event.set()
@@ -119,7 +120,7 @@ class ClusterStateMonitor(threading.Thread):
             if jobs_to_launch > 0:
                 print(f"Launching {jobs_to_launch} new instances...")
                 for _ in range(jobs_to_launch):
-                    job_id = self.cluster.invoke(cfg.device_name, cfg.script_spec)
+                    job_id = self.cluster.invoke(cfg.device_name, cfg.script_spec,**self.cluster.extra_args)
                     if job_id:
                         print(f"Launched new job with ID: {job_id}")
                     else:

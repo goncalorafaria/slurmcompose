@@ -23,4 +23,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    entry_points={
+        'console_scripts': [
+            'slurmcompose=slurmcompose.launch_literegistry_cluster:main',
+        ],
+    },
 )
+# "literegistry = literegistry.cli:main",
